@@ -1,0 +1,25 @@
+Testes com sequencia de remoções:
+
+//Erro: cabeça da LED gravada incorretamente
+101049
+128060
+147477
+213705
+
+
+//Remoção torna a cabeça da LED inválida
+128060
+
+
+//Da certo
+123316
+186989
+163603
+124592
+
+
+//Da certo
+108780
+103178
+500030
+223462
