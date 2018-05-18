@@ -1,5 +1,14 @@
-//Aluno: William Rodrigues da Silva | RA99514
-//Trabalho realizado em 2018 para disciplina de ORD
+/*
+
+Alunos:
+William Rodrigues da Silva | RA99514
+João Vitor Malvestio da Silva | RA93089
+
+Trabalho realizado em 2018 para disciplina de ORD
+GERENCIAMENTO DE ARQUIVOS DE TAMANHO VARIAVEL
+(Importação, inserção, remoção e recuperação)
+
+*/
 
 #include <stdio.h>
 #include <string.h>
@@ -65,7 +74,6 @@ void removeRegistro(FILE* arq, char inscricao[]){
     while(!encontrado){
         tamanhoRegistro=getRegistro(arq, buffer);
         if(tamanhoRegistro>0){
-            //printf("\n%s", buffer); //Print de teste no console
             resultadoBusca = strtok(buffer, "|");
             if(strcmp(inscricao, resultadoBusca)==0){
                 encontrado = 1;
@@ -93,12 +101,11 @@ void removeRegistro(FILE* arq, char inscricao[]){
 
 void insereRegistro(FILE *arq, char buffer[], int tamRegistro){
 
-    int cabecaLED, offsetProx, copiaOffset, tamDisponivel, fimLED=0;
+    int cabecaLED, offsetAnt, offsetProx, copiaOffset, tamDisponivel, fimLED=0, primeiroDaLED=1;
 
     fseek(arq, 0, SEEK_SET);
     fread(&cabecaLED, sizeof(cabecaLED), 1, arq);
     offsetProx = cabecaLED;
-    //printf("\nCabeca LED: %d", cabecaLED); //Print de teste no console
 
     if(cabecaLED==(-1)){ //Caso LED Vazia
         printf("\nLED vazia, registro inserido no final do arquivo.");
@@ -108,35 +115,47 @@ void insereRegistro(FILE *arq, char buffer[], int tamRegistro){
     }else{
         fseek(arq, cabecaLED, SEEK_SET);
         fread(&tamDisponivel, sizeof(tamDisponivel), 1, arq);
+
         while(fimLED==0){
+
             if(tamDisponivel>=tamRegistro){
                 printf("\nEncontrou espaco adequado na LED");
                 printf("\nRegistro inserido no offset %d.", offsetProx);
-                //Guarda o valor para atualizar a cabeça LED
+                //Guarda o valor para encadear a LED
                 fseek(arq, 2, SEEK_CUR); //pular *|
                 copiaOffset = offsetProx;
                 fscanf(arq, "%d", &offsetProx);
-                //printf("\nOffset prox: %d", offsetProx); //Print de teste no console
                 //Sobrescreve os dados do novo registro
                 fseek(arq, copiaOffset, SEEK_SET);
                 fwrite(&tamRegistro, sizeof(int), 1, arq);
                 fwrite(buffer, tamRegistro, 1, arq);
-                //Grava o novo valor na cabeça LED
-                fseek(arq, 0, SEEK_SET);
-                fwrite(&offsetProx, sizeof(int), 1, arq);
 
-                return;
+                if(primeiroDaLED==1){ //Caso seja o primeiro registro da LED
+
+                    //Grava o novo valor na cabeça LED (LED = atual->prox)
+                    fseek(arq, 0, SEEK_SET);
+                    fwrite(&offsetProx, sizeof(int), 1, arq);
+                    return;
+
+                }else{//Caso inserir no meio ou ultimo da LED
+
+                    //Encadear a LED corretamente (anterior->prox = atual->prox)
+                    fseek(arq, offsetAnt, SEEK_SET);
+                    fseek(arq, 2, SEEK_CUR); //Pula *|
+                    fprintf(arq, "%d|", offsetProx);
+                    return;
+                }
             }
+
             printf("\nEspaco insuficiente para inserir registro");
             printf("\nEncontrando proximos espacos na LED...");
+            primeiroDaLED = 0; //Não está mais no priemiro
+            offsetAnt = ftell(arq); //Grava o offset atual (que será anterior para próxima execução)
             fseek(arq, 2, SEEK_CUR);
             fscanf(arq, "%d", &offsetProx);
-            //printf("\nOffset prox: %d", offsetProx); //Print de teste no console
-
             if(offsetProx==(-1)){
                 fimLED=1;
             }
-
             fseek(arq, offsetProx, SEEK_SET);
             fread(&tamDisponivel, sizeof(tamDisponivel), 1, arq);
 
@@ -147,8 +166,6 @@ void insereRegistro(FILE *arq, char buffer[], int tamRegistro){
         fwrite(&tamRegistro, sizeof(int), 1, arq);
         fwrite(buffer, tamRegistro, 1, arq);
     }
-
-
 }
 
 
@@ -173,12 +190,14 @@ void recuperarRegistro(FILE *arq, char inscricao[]){
     }
     if(encontrado){
         printf("\nResultado da Busca:\n");
-        printf("| %s |", resultadoBusca);
+        printf("\nMatricula: %s", resultadoBusca);
         resultadoBusca = strtok(NULL, "|");
-        while(resultadoBusca!=NULL){
-            printf(" %s |", resultadoBusca);
-            resultadoBusca = strtok(NULL, "|");
-        }
+        printf("\nNome: %s", resultadoBusca);
+        resultadoBusca = strtok(NULL, "|");
+        printf("\nCurso: %s", resultadoBusca);
+        resultadoBusca = strtok(NULL, "|");
+        printf("\nNota: %s", resultadoBusca);
+
     }else{
         printf("\nNenhum resultado encontrado para inscricao: \"%s\"", inscricao);
     }
@@ -190,7 +209,9 @@ void solicitaRemocao(FILE *arq){
     char inscricao[10];
 
     fflush(stdin);
-    printf("\nREMOVER Registro");
+    printf("\n+----------------------------------------------------+");
+    printf("\n|                 REMOVER REGISTRO                   |");
+    printf("\n+----------------------------------------------------+");
     printf("\nDigite a inscricao para remover: ");
     scanf("%s", &inscricao);
     removeRegistro(arq, inscricao);
@@ -204,7 +225,9 @@ void solicitaInsercao(FILE *arq){
     buffer[0] = '\0';
 
     fflush(stdin);
-    printf("\nINSERIR Registro");
+    printf("\n+----------------------------------------------------+");
+    printf("\n|                 INSERIR REGISTRO                   |");
+    printf("\n+----------------------------------------------------+");
     printf("\nDigite o numero de inscricao: ");
     scanf("%s", &inscricao);
     strcat(buffer, inscricao);
@@ -237,7 +260,9 @@ void solicitaRecuperarRegistro(FILE *arq){
     char inscricao[10];
 
     fflush(stdin);
-    printf("\nBUSCAR Registro");
+    printf("\n+----------------------------------------------------+");
+    printf("\n|                  BUSCAR REGISTRO                   |");
+    printf("\n+----------------------------------------------------+");
     printf("\nDigite a inscricao para buscar: ");
     scanf("%s", &inscricao);
     recuperarRegistro(arq, inscricao);
@@ -263,20 +288,23 @@ void exibirMenuInicial(){
 
 int main(){
 
-    int opcao=1, cabecaLED, arquivoAberto=0;
+    int opcao=1, arquivoAberto=0;
     char nomeArqEntrada[50], nomeArqSaida[50];
     FILE *entrada, *saida;
 
     strcpy(nomeArqSaida, "Nenhum arquivo aberto.");
-    printf("Gerenciamento de Registros de tamanho variavel");
+    printf("+----------------------------------------------------+");
+    printf("\n|   Gerenciamento de Registros de Tamanho Variavel   |");
+    printf("\n|        Por: William Rodrigues de Joao Vitor        |");
+    printf("\n+----------------------------------------------------+");
 
     while(opcao!=0){
 
-        printf("\n\n---------------------------------------------------");
+        printf("\n\n------------------------------------------------------");
         printf("\nInfo: Arquivo sendo editado: %s", nomeArqSaida);
         if(arquivoAberto==1) exibirMenu();
         else exibirMenuInicial();
-        printf("\n---------------------------------------------------");
+        printf("\n------------------------------------------------------");
         printf("\nOpcao: ");
         scanf("%d", &opcao);
         fflush(stdin);
@@ -335,7 +363,7 @@ int main(){
             break;
 
         case 0:
-            printf("\nFim do programa.");
+            printf("\n\nObrigado por usar o sistema!\n\n");
             break;
 
         default:
